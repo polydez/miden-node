@@ -41,31 +41,45 @@ fn main() -> anyhow::Result<()> {
     let out = env::var("OUT_DIR").context("env::OUT_DIR not set")?;
     let file_descriptor_path = PathBuf::from(out).join("file_descriptor_set.bin");
 
-    // Compile the proto file for all servers APIs
-    let protos = &[
-        proto_dir.join("block_producer.proto"),
-        proto_dir.join("store.proto"),
-        proto_dir.join("rpc.proto"),
-    ];
+    // Compile the proto file for block_producer and store
+    let protos = &[proto_dir.join("block_producer.proto"), proto_dir.join("store.proto")];
+    compile_proto_files(protos, true, proto_dir.clone(), &file_descriptor_path, &dst_dir)?;
+
+    // Compile the proto file for rpc
+    let protos = &[proto_dir.join("rpc.proto")];
+    #[cfg(feature = "rpc-client")]
+    let generate_rpc_server = true;
+    #[cfg(not(feature = "rpc-client"))]
+    let generate_rpc_server = false;
+    compile_proto_files(protos, generate_rpc_server, proto_dir, &file_descriptor_path, &dst_dir)?;
+
+    generate_mod_rs(&dst_dir).context("generating mod.rs")?;
+
+    Ok(())
+}
+
+fn compile_proto_files(
+    protos: &[PathBuf],
+    with_client: bool,
+    proto_dir: PathBuf,
+    file_descriptor_path: &PathBuf,
+    dst_dir: &PathBuf,
+) -> anyhow::Result<()> {
     let includes = &[proto_dir];
     let file_descriptors = protox::compile(protos, includes)?;
-    fs::write(&file_descriptor_path, file_descriptors.encode_to_vec())
+    fs::write(file_descriptor_path, file_descriptors.encode_to_vec())
         .context("writing file descriptors")?;
 
     let mut prost_config = prost_build::Config::new();
     prost_config.skip_debug(["AccountId", "Digest"]);
 
-    // Generate the stub of the user facing server from its proto file
     tonic_build::configure()
-        .file_descriptor_set_path(&file_descriptor_path)
+        .build_client(with_client)
+        .file_descriptor_set_path(file_descriptor_path)
         .skip_protoc_run()
-        .out_dir(&dst_dir)
+        .out_dir(dst_dir)
         .compile_protos_with_config(prost_config, protos, includes)
-        .context("compiling protobufs")?;
-
-    generate_mod_rs(&dst_dir).context("generating mod.rs")?;
-
-    Ok(())
+        .context("compiling protobufs")
 }
 
 /// Generate `mod.rs` which includes all files in the folder as submodules.
