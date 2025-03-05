@@ -21,7 +21,7 @@
 - [BREAKING] Update `GetBlockInputs` RPC (#709).
 - [BREAKING] `CheckNullifiersByPrefix` now takes a starting block number (#707).
 - [BREAKING] Removed nullifiers from `SyncState` endpoint (#708).
-- [BREAKING] Removed rpc api client from `proto` crate.
+- [BREAKING] Added `rpc-client` feature to miden-node-proto crate (#723).
 
 ### Enhancements
 
