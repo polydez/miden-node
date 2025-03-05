@@ -48,10 +48,10 @@ fn main() -> anyhow::Result<()> {
     // Compile the proto file for rpc
     let protos = &[proto_dir.join("rpc.proto")];
     #[cfg(feature = "rpc-client")]
-    let generate_rpc_server = true;
+    let generate_rpc_client = true;
     #[cfg(not(feature = "rpc-client"))]
-    let generate_rpc_server = false;
-    compile_proto_files(protos, generate_rpc_server, proto_dir, &file_descriptor_path, &dst_dir)?;
+    let generate_rpc_client = false;
+    compile_proto_files(protos, generate_rpc_client, proto_dir, &file_descriptor_path, &dst_dir)?;
 
     generate_mod_rs(&dst_dir).context("generating mod.rs")?;
 
